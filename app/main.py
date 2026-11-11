@@ -13,6 +13,10 @@ def home():
 def health():
     return {"status": "ok"}
 
+@app.get("/version")
+def version():
+    return {"version": "0.1.0"}
+
 @app.post("/analyze")
 async def analyze_image(file: UploadFile = File(...)):
     if file.content_type not in ["image/jpeg", "image/png"]:
