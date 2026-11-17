@@ -2,6 +2,8 @@ from fastapi import FastAPI
 import cv2
 import numpy as np
 from fastapi import UploadFile, File, HTTPException
+from functools import lru_cache
+from app.model import ImageClassifier
 
 app = FastAPI(title="Industrial AI Platform")
 
@@ -47,3 +49,30 @@ async def analyze_image(file: UploadFile = File(...)):
             "height": height,
             "mean_brightness": round(brightness, 2)
     }
+
+@lru_cache(maxsize=1)
+def get_classifier():
+    return ImageClassifier()
+
+@app.post("/predict")
+def predict_image(file: UploadFile = File(...)):
+    if file.content_type not in ["image/jpeg", "image/png"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
+
+    max_size = 5 * 1024 * 1024
+    content = file.file.read(max_size + 1)
+
+    if len(content) > max_size:
+        raise HTTPException(status_code=413, detail="File size exceeds the maximum limit of 5MB.")
+
+    array = np.frombuffer(content, dtype=np.uint8)
+    image = cv2.imdecode(array, cv2.IMREAD_COLOR)
+
+    if image is None:
+        raise HTTPException(status_code=400, detail="Invalid image file.")
+
+    classifier = get_classifier()
+    predictions = classifier.predict(image, top_k=5)
+
+    return {"filename": file.filename,
+            "predictions": predictions}
