@@ -1,7 +1,6 @@
-from fastapi import FastAPI
 import cv2
 import numpy as np
-from fastapi import UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from functools import lru_cache
 from app.model import ImageClassifier
 
@@ -55,7 +54,7 @@ def get_classifier():
     return ImageClassifier()
 
 @app.post("/predict")
-def predict_image(file: UploadFile = File(...)):
+def predict_image(file: UploadFile = File(...), top_k: int = Query(default=5, ge=1, le=10)):
     if file.content_type not in ["image/jpeg", "image/png"]:
         raise HTTPException(status_code=400, detail="Invalid file type. Only JPEG and PNG are allowed.")
 
@@ -72,7 +71,7 @@ def predict_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid image file.")
 
     classifier = get_classifier()
-    predictions = classifier.predict(image, top_k=5)
+    predictions = classifier.predict(image, top_k=top_k)
 
     return {"filename": file.filename,
             "predictions": predictions}

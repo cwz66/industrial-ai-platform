@@ -93,3 +93,33 @@ def test_predict_image_arguments(sample_image):
         np.testing.assert_array_equal(received_image, image)
 
         assert kwargs["top_k"] == 5
+
+@pytest.mark.parametrize("top_k", [1, 3, 5, 10])
+def test_predict_custom_top_k(sample_image, top_k):
+    _, image_bytes = sample_image
+
+    with patch('app.main.get_classifier') as mock_get_classifier:
+        fake_classifier = mock_get_classifier.return_value
+        fake_classifier.predict.return_value = [{"class": "tabby", "confidence": 0.8}]
+
+        response = client.post(f"/predict?top_k={top_k}", files={"file": ("test.png", image_bytes, "image/png")})
+
+        assert response.status_code == 200
+
+        fake_classifier.predict.assert_called_once()
+        
+        kwargs = fake_classifier.predict.call_args.kwargs
+
+        assert kwargs["top_k"] == top_k
+
+@pytest.mark.parametrize("top_k", [0, -1, 11, 100])
+def test_predict_invalid_top_k(sample_image, top_k):
+    _, image_bytes = sample_image
+
+    with patch("app.main.get_classifier") as mock_get_classifier:
+
+        response = client.post(f"/predict?top_k={top_k}",files={"file": ("test.png", image_bytes, "image/png")})
+
+        assert response.status_code == 422
+
+        mock_get_classifier.assert_not_called()
