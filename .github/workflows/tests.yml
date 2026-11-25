@@ -25,5 +25,5 @@ jobs:
           pip install fastapi uvicorn opencv-python-headless numpy python-multipart pytest httpx
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Run API tests
-        run: python -m pytest tests/test_api.py -v
+      - name: Run fast tests
+        run: python -m pytest -v -m "not integration"
